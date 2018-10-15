@@ -1,7 +1,7 @@
 version: '3.0'
 services:
   web:
-    image: marstrueplus/magento2:v2
+    image: marstrueplus/magento2.2.x:apache2-php7.0.22
     ports:
       - "9100:80"
     links:
