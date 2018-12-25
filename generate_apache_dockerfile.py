@@ -2,6 +2,7 @@
 
 import os
 import re
+from fabric import Connection
 
 
 def get_gpg_keys(php_version):
@@ -17,14 +18,19 @@ def get_gpg_keys(php_version):
     return res
 
 
-def update_apache_php_build_file():
-    # generate dockerfiles: all docker php version
+def get_php_versions():
     php_version_f = 'php_info/php_versions.csv'
-    demo_file = open('all/demo', "r+")
-    demo_content = demo_file.readlines()
-
     with open(php_version_f, 'r') as f:
         php_versions = f.readlines()
+
+    return php_versions
+
+
+def generate_apache_php_build_files():
+    # generate dockerfiles: all docker php version
+    demo_file = open('all/demo', "r+")
+    demo_content = demo_file.readlines()
+    php_versions = get_php_versions()
 
     for line in php_versions:
         new_content = demo_content.copy()
@@ -36,32 +42,58 @@ def update_apache_php_build_file():
         PHP_URL = "https://secure.php.net/get/%s/from/this/mirror" % (PHP_FILENAME)
         PHP_ASC_URL = "https://secure.php.net/get/%s.asc/from/this/mirror" % (PHP_FILENAME)
 
-        line44 = 'ENV GPG_KEYS %s\n' % (GPG_KEYS)
-        line46 = 'ENV PHP_VERSION %s\n' % (PHP_VERSION)
-        line47 = 'ENV PHP_FILENAME %s\n' % (PHP_FILENAME)
-        line48 = 'ENV PHP_SHA256 %s\n' % (PHP_SHA256)
-        line49 = 'ENV PHP_URL="%s" PHP_ASC_URL="%s"\n' % (PHP_URL, PHP_ASC_URL)
-        line64 = '	&& wget -O php.tar.xz "%s" \\\n' % (PHP_URL)
-        line65 = '	&& echo "%s *php.tar.xz" | sha256sum -c - \\\n' % (PHP_SHA256)
-        line66 = '	&& wget -O php.tar.xz.asc "%s" \\\n' % (PHP_ASC_URL)
-        line68 = '	&& for key in %s; do \\\n' % (GPG_KEYS)
-        line72 = '	&& rm -rf "$GNUPGHOME" "%s.asc"\\\n' % (PHP_FILENAME)
+        line41 = 'ENV GPG_KEYS %s\n' % (GPG_KEYS)
+        line43 = 'ENV PHP_VERSION %s\n' % (PHP_VERSION)
+        line44 = 'ENV PHP_FILENAME %s\n' % (PHP_FILENAME)
+        line45 = 'ENV PHP_SHA256 %s\n' % (PHP_SHA256)
+        line46 = 'ENV PHP_URL="%s" PHP_ASC_URL="%s"\n' % (PHP_URL, PHP_ASC_URL)
+        line61 = '	&& wget -O php.tar.xz "%s" \\\n' % (PHP_URL)
+        line62 = '	&& echo "%s *php.tar.xz" | sha256sum -c - \\\n' % (PHP_SHA256)
+        line63 = '	&& wget -O php.tar.xz.asc "%s" \\\n' % (PHP_ASC_URL)
+        line65 = '	&& for key in %s; do \\\n' % (GPG_KEYS)
+        line69 = '	&& rm -rf "$GNUPGHOME" "%s.asc"\\\n' % (PHP_FILENAME)
 
+        new_content[41 - 1] = line41
+        new_content[43 - 1] = line43
         new_content[44 - 1] = line44
+        new_content[45 - 1] = line45
         new_content[46 - 1] = line46
-        new_content[47 - 1] = line47
-        new_content[48 - 1] = line48
-        new_content[49 - 1] = line49
-        new_content[64 - 1] = line64
+        new_content[61 - 1] = line61
+        new_content[62 - 1] = line62
+        new_content[63 - 1] = line63
         new_content[65 - 1] = line65
-        new_content[66 - 1] = line66
-        new_content[68 - 1] = line68
-        new_content[72 - 1] = line72
+        new_content[69 - 1] = line69
 
-        f = open("all/apache2-php%s" % PHP_VERSION, "w+")
-        f.writelines(new_content)
-        f.close()
+        with open('all/apache2-php%s' % PHP_VERSION, 'w') as f:
+            f.writelines(new_content)
+
+
+def generate_apache_php_build_folder():
+    local_con = Connection('localhost')
+    php_versions = get_php_versions()
+
+    for line in php_versions:
+        PHP_VERSION = line.split(' ')[0]
+        docker_filename = 'apache2-php%s' % PHP_VERSION
+        dic_src = "build_folder/demo"
+        dic_dest = "build_folder/%s" % docker_filename
+        dic_src_path = os.path.abspath(dic_src)
+        dic_dest_path = os.path.abspath(dic_dest)
+        local_con.local('rm -rf {0} && mkdir {0}'.format(dic_dest_path))
+        local_con.local('cp -r %s/* %s' % (dic_src_path, dic_dest_path))
+
+        file_src = "all/%s" % docker_filename
+        file_dest = "build_folder/{0}/{0}".format(docker_filename)
+        file_src_path = os.path.abspath(file_src)
+        file_dest_path = os.path.abspath(file_dest)
+        local_con.local('cp -r %s %s' % (file_src_path, file_dest_path))
+
+    all_apache_files = os.path.abspath('all')
+    local_con.local('rm -rf %s/apache*' % all_apache_files)
 
 
 if __name__ == '__main__':
-    update_apache_php_build_file()
+    # run separate below functions
+    # generate_apache_php_build_files()
+    generate_apache_php_build_folder()
+    pass
