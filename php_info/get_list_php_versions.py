@@ -10,6 +10,14 @@ def value_contain_string(val, c_str):
     return c_str in val
 
 
+def is_int(val):
+    try:
+        int(val)
+        return True
+    except ValueError as e:
+        return False
+
+
 def get_stable_version():
     res = []
     url = 'http://php.net/downloads.php'
@@ -42,9 +50,15 @@ def get_unsupported_version():
     php_versions = []
     h2_tags = soup.find_all('h2')
     for tag in h2_tags:
-        # get only php version >= 7.0.0
-        if int(tag.text.split('.')[0]) >= 7:
-            php_versions.append(tag.text)
+        php_version = tag.text
+        part_versions = [int(x) for x in php_version.split('.') if is_int(x)]
+        if part_versions[1] >=1 :
+            a = 1
+        if len(part_versions) < 3 or \
+                part_versions[0] < 7 or \
+                (part_versions[0] == 7 and part_versions[1] == 0 and part_versions[2] < 13):
+            continue
+        php_versions.append(php_version)
     for php_version in php_versions:
         sha256 = soup.find(href=re.compile('%s.tar.xz' % php_version)).find_next_sibling('span', class_='sha256sum').text.split(' ')[-1]
         res.append({
@@ -55,11 +69,19 @@ def get_unsupported_version():
     return res
 
 
-if __name__ == '__main__':
-    res = get_stable_version() + get_unsupported_version()
-    res = sorted(res, key=itemgetter('php_version'), reverse=True)
+def get_all_php_versions():
+    # get only php version >= 7.0.13 (magento 2.2.x - 2.3.x)
+    res = []
+    stable_versions = get_stable_version()
+    unsupported_versions = get_unsupported_version()
+    all = stable_versions + unsupported_versions
+    for info in all:
+        res.append(info)
+    return sorted(res, key=itemgetter('php_version'), reverse=True)
 
-    # existed_lines = ''
+
+if __name__ == '__main__':
+    res = get_all_php_versions()
     with open('php_versions.csv', 'r') as f:
         existed_lines = f.read()
 
