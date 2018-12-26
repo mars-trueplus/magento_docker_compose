@@ -3,7 +3,7 @@
 import os
 import re
 from fabric import Connection
-
+import subprocess
 
 def get_gpg_keys(php_version):
     res = []
@@ -35,7 +35,7 @@ def generate_apache_php_build_files():
     for line in php_versions:
         new_content = demo_content.copy()
         PHP_VERSION = line.split(' ')[0]
-        PHP_SHA256 = line.split(' ')[1]
+        PHP_SHA256 = line.split(' ')[1].replace('\n', '')
 
         GPG_KEYS = ' '.join(get_gpg_keys(PHP_VERSION))
         PHP_FILENAME = "php-%s.tar.xz" % (PHP_VERSION)
@@ -89,11 +89,40 @@ def generate_apache_php_build_folder():
         local_con.local('cp -r %s %s' % (file_src_path, file_dest_path))
 
     all_apache_files = os.path.abspath('all')
-    local_con.local('rm -rf %s/apache*' % all_apache_files)
+    # local_con.local('rm -rf %s/apache*' % all_apache_files)
 
+
+def generate_magento_build_files():
+    php_versions = get_php_versions()
+    demo_file = open('all_m2/demo', 'r+')
+    demo_content = demo_file.readlines()
+    for php_version in php_versions:
+        new_content = demo_content.copy()
+        apache_php_version = "apache2-php%s" % php_version
+        line1 = "FROM marstrueplus/%s\n" % apache_php_version
+        line4 = 'LABEL description="Apache 2 - PHP %s"\n' % php_version
+
+        new_content[1 - 1] = line1
+        new_content[4 - 1] = line4
+
+        with open('all_m2/m2_%s' % apache_php_version, 'w') as f:
+            f.writelines(new_content)
+
+def build_apache_php_images():
+    php_versions = get_php_versions()
+    for php_version in php_versions:
+        docker_filename = "apache2-php%s" % php_version
+        dockerfile = "build_folder/{0}/{0}".format(docker_filename)
+        build_context_folder = "build_folder/%s" % (docker_filename)
+        build_command = "docker build -f %s -t marstrueplus/%s %s" % (dockerfile, docker_filename, build_context_folder)
+        start_str = "*" * 50 + "\n" + "*" * 50 + "\nStart building %s image \n" % docker_filename + "*" * 50 + "\n" + "*" * 50 + "\n"
+        subprocess.call(["echo", start_str])
+        subprocess.call(build_command, shell=True)
 
 if __name__ == '__main__':
     # run separate below functions
     # generate_apache_php_build_files()
     generate_apache_php_build_folder()
+    # build_apache_php_images()
+    # generate_magento_build_files()
     pass
