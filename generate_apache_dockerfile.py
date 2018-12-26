@@ -223,10 +223,31 @@ def generate_magento_build_files():
             f.writelines(new_content)
 
 
+def generate_magento_build_folder():
+    local_con = Connection('localhost')
+    php_versions = get_php_versions()
+    for php_version in php_versions:
+        docker_filename = "m2_apache2-php%s" % php_version
+
+        dic_src = "build_folder_m2/demo"
+        dic_dest = "build_folder_m2/%s" % docker_filename
+        dic_src_path = os.path.abspath(dic_src)
+        dic_dest_path = os.path.abspath(dic_dest)
+        local_con.local('rm -rf {0} && mkdir {0}'.format(dic_dest_path))
+        local_con.local('cp -r %s/* %s' % (dic_src_path, dic_dest_path))
+
+        file_src = "all_m2/%s" % docker_filename
+        file_dest = "build_folder_m2/{0}/{0}".format(docker_filename)
+        file_src_path = os.path.abspath(file_src)
+        file_dest_path = os.path.abspath(file_dest)
+        local_con.local('cp -r %s %s' % (file_src_path, file_dest_path))
+
+
 if __name__ == '__main__':
     # run separate below functions
     # get_all_php_releases()
     # generate_apache_php_build_files()
     # generate_apache_php_build_folder()
     # build_apache_php_images()
-    generate_magento_build_files()
+    # generate_magento_build_files()
+    generate_magento_build_folder()

@@ -1,0 +1,63 @@
+FROM marstrueplus/apache2-php7.2.6
+LABEL maintainer="mars@trueplus.vn"
+LABEL version="Magento >= 2.2.x"
+LABEL description="Apache 2 - PHP 7.2.6"
+
+ENV INSTALL_DIR /var/www/html
+ENV COMPOSER_HOME /var/www/.composer/
+ENV PERMISSION_DIR /var/www
+
+RUN curl -sS https://getcomposer.org/installer | php \
+    && mv composer.phar /usr/local/bin/composer
+COPY ./auth.json $COMPOSER_HOME
+
+RUN requirements="libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype6 libjpeg-turbo8 libjpeg-turbo8-dev libpng12-dev libfreetype6-dev libicu-dev libxslt1-dev" \
+    && apt-get update \
+    && apt-get install -y $requirements \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install gd \
+    && docker-php-ext-install mcrypt \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-install zip \
+    && docker-php-ext-install intl \
+    && docker-php-ext-install xsl \
+    && docker-php-ext-install soap \
+    && docker-php-ext-install bcmath \
+    && docker-php-ext-install opcache \
+    && requirementsToRemove="libpng12-dev libmcrypt-dev libcurl3-dev libpng12-dev libfreetype6-dev libjpeg-turbo8-dev" \
+    && apt-get purge --auto-remove -y $requirementsToRemove
+
+# Set UID 1000 to www-data user and GID to www-data group
+RUN usermod -u 1000 www-data \
+    && groupmod -g 1000 www-data
+RUN chsh -s /bin/bash www-data
+RUN mkdir -p $INSTALL_DIR
+RUN chown -R 1000:1000 $PERMISSION_DIR
+RUN chmod 775 $PERMISSION_DIR
+RUN chmod g+ws $PERMISSION_DIR
+
+
+RUN cd $INSTALL_DIR \
+    && find . -type d -exec chmod g+w {} \; \
+    && find . -type f -exec chmod g+ws {} \;
+
+COPY ./install-magento /usr/local/bin/install-magento
+RUN chmod +x /usr/local/bin/install-magento
+
+COPY ./install-sampledata /usr/local/bin/install-sampledata
+RUN chmod +x /usr/local/bin/install-sampledata
+
+RUN a2enmod rewrite
+RUN echo "memory_limit=2048M" > /usr/local/etc/php/conf.d/memory-limit.ini
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR $INSTALL_DIR
+
+# Add cron job
+# ADD crontab /etc/cron.d/magento2-cron
+# RUN chmod 0644 /etc/cron.d/magento2-cron \
+#    && crontab -u www-data /etc/cron.d/magento2-cron
+
