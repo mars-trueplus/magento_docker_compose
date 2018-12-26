@@ -1,6 +1,6 @@
 FROM marstrueplus/apache2-php7.0.18
 LABEL maintainer="mars@trueplus.vn"
-LABEL version="Magento 2.2.x"
+LABEL version="Magento >= 2.2.x"
 LABEL description="Apache 2 - PHP 7.0.18"
 
 ENV INSTALL_DIR /var/www/html
@@ -25,6 +25,7 @@ RUN requirements="libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype
     && docker-php-ext-install xsl \
     && docker-php-ext-install soap \
     && docker-php-ext-install bcmath \
+    && docker-php-ext-install opcache \
     && requirementsToRemove="libpng12-dev libmcrypt-dev libcurl3-dev libpng12-dev libfreetype6-dev libjpeg-turbo8-dev" \
     && apt-get purge --auto-remove -y $requirementsToRemove
 
@@ -60,5 +61,3 @@ WORKDIR $INSTALL_DIR
 # RUN chmod 0644 /etc/cron.d/magento2-cron \
 #    && crontab -u www-data /etc/cron.d/magento2-cron
 
-
-#USER www-data

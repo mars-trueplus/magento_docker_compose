@@ -1,6 +1,6 @@
 FROM marstrueplus/apache2-php7.0.13
 LABEL maintainer="mars@trueplus.vn"
-LABEL version="Magento 2.2.x"
+LABEL version="Magento >= 2.2.x"
 LABEL description="Apache 2 - PHP 7.0.13"
 
 ENV INSTALL_DIR /var/www/html
@@ -61,5 +61,3 @@ WORKDIR $INSTALL_DIR
 # RUN chmod 0644 /etc/cron.d/magento2-cron \
 #    && crontab -u www-data /etc/cron.d/magento2-cron
 
-
-#USER www-data
