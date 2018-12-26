@@ -24,6 +24,21 @@ def is_int(val):
         return False
 
 
+def compare_php_version(v1, v2, equal=False):
+    """
+    Return True if v1 > v2 (>=)
+    :param v1:
+    :param v2:
+    :param equal: check equal condition when compare or not
+    :return:
+    """
+    v1 = [x if len(x) == 2 else x + '0' for x in v1.split('.')]
+    v2 = [y if len(y) == 2 else y + '0' for y in v2.split('.')]
+    v1_num = int(''.join(v1))
+    v2_num = int(''.join(v2))
+    return v1_num >= v2_num if equal else v1_num > v2_num
+
+
 def get_stable_releases():
     res = []
     url = 'http://php.net/downloads.php'
@@ -215,7 +230,14 @@ def generate_magento_build_files():
         apache_php_version = "apache2-php%s" % php_version
         line1 = "FROM marstrueplus/%s\n" % apache_php_version
         line4 = 'LABEL description="Apache 2 - PHP %s"\n' % php_version
-
+        if compare_php_version('7.3.0', php_version, equal=False):
+            if compare_php_version(php_version, '7.2.0', equal=True):
+                # install mcrypt using pecl and enable it
+                install_command = 'pecl install mcrypt-1.0.1 && docker-php-ext-enable mcrypt'
+            else:
+                install_command = 'docker-php-ext-install mcrypt'
+            install_command = '\n# Install mcrypt\nRUN {command}\n'.format(command=install_command)
+            new_content.insert(29, install_command)
         new_content[1 - 1] = line1
         new_content[4 - 1] = line4
 
@@ -263,6 +285,20 @@ def build_magento_images():
         subprocess.run(build_command, shell=True)
 
 
+def generate_magento_docker_compose_files():
+    demo_file = open('all_docker_compose_file/demo', "r+")
+    demo_content = demo_file.readlines()
+    php_versions = get_php_versions()
+    for php_version in php_versions:
+        new_content = demo_content.copy()
+        apache_php_version = "apache2-php%s" % php_version
+        line4 = '    image: marstrueplus/m2_%s\n' % apache_php_version
+        new_content[4 - 1] = line4
+
+        with open("all_docker_compose_file/m2_%s" % apache_php_version, "w") as f:
+            f.writelines(new_content)
+
+
 if __name__ == '__main__':
     # run separate below functions
     # get_all_php_releases()
@@ -270,5 +306,6 @@ if __name__ == '__main__':
     # generate_apache_php_build_folder()
     # build_apache_php_images()
     # generate_magento_build_files()
-    # generate_magento_build_folder()
-    build_magento_images()
+    generate_magento_build_folder()
+    # build_magento_images()
+    # print(compare_php_version('7.1.20', '7.1.3'))
