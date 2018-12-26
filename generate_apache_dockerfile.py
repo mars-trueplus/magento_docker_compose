@@ -5,6 +5,7 @@ import re
 from fabric import Connection
 import subprocess
 
+
 def get_gpg_keys(php_version):
     res = []
     php_gpg_keys_f = os.path.abspath('php_info/gpg_keys')
@@ -108,21 +109,26 @@ def generate_magento_build_files():
         with open('all_m2/m2_%s' % apache_php_version, 'w') as f:
             f.writelines(new_content)
 
+
 def build_apache_php_images():
     php_versions = get_php_versions()
-    for php_version in php_versions:
+    for line in php_versions:
+        php_version = line.split(' ')[0]
         docker_filename = "apache2-php%s" % php_version
         dockerfile = "build_folder/{0}/{0}".format(docker_filename)
-        build_context_folder = "build_folder/%s" % (docker_filename)
-        build_command = "docker build -f %s -t marstrueplus/%s %s" % (dockerfile, docker_filename, build_context_folder)
+        dockerfile_path = os.path.abspath(dockerfile)
+        build_context = "build_folder/%s" % (docker_filename)
+        build_context_path = os.path.abspath(build_context)
+        build_command = "docker build -f %s -t marstrueplus/%s %s" % (dockerfile_path, docker_filename, build_context_path)
         start_str = "*" * 50 + "\n" + "*" * 50 + "\nStart building %s image \n" % docker_filename + "*" * 50 + "\n" + "*" * 50 + "\n"
         subprocess.call(["echo", start_str])
         subprocess.call(build_command, shell=True)
 
+
 if __name__ == '__main__':
     # run separate below functions
     # generate_apache_php_build_files()
-    generate_apache_php_build_folder()
-    # build_apache_php_images()
+    # generate_apache_php_build_folder()
+    build_apache_php_images()
     # generate_magento_build_files()
     pass
