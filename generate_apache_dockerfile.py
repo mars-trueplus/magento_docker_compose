@@ -243,6 +243,26 @@ def generate_magento_build_folder():
         local_con.local('cp -r %s %s' % (file_src_path, file_dest_path))
 
 
+def build_magento_images():
+    php_versions = get_php_versions()
+    for php_version in php_versions:
+        docker_filename = "m2_apache2-php%s" % php_version
+        dockerfile = "build_folder_m2/{0}/{0}".format(docker_filename)
+        dockerfile_path = os.path.abspath(dockerfile)
+        build_context = "build_folder_m2/%s" % (docker_filename)
+        build_context_path = os.path.abspath(build_context)
+        build_command = "sudo docker build -f {dockerfile_path} -t {repo_owner}/{image_name}:v{image_version} {build_context_path}".format(
+            dockerfile_path=dockerfile_path,
+            repo_owner=REPO_OWNER,
+            image_name=docker_filename,
+            image_version=BUILD_VERSION,
+            build_context_path=build_context_path
+        )
+        start_str = "*" * 100 + "\n" + "*" * 100 + "\nStart building %s image \n" % docker_filename + "*" * 100 + "\n" + "*" * 100 + "\n"
+        subprocess.run(["echo", start_str])
+        subprocess.run(build_command, shell=True)
+
+
 if __name__ == '__main__':
     # run separate below functions
     # get_all_php_releases()
@@ -250,4 +270,5 @@ if __name__ == '__main__':
     # generate_apache_php_build_folder()
     # build_apache_php_images()
     # generate_magento_build_files()
-    generate_magento_build_folder()
+    # generate_magento_build_folder()
+    build_magento_images()
