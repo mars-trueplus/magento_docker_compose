@@ -313,6 +313,43 @@ def push_magento_images_to_hub():
         subprocess.run(push_command, shell=True)
 
 
+def generate_magento_docker_compose_files():
+    demo_file = open('all_docker_compose_file/demo', "r+")
+    demo_content = demo_file.readlines()
+    php_versions = get_php_versions()
+    for php_version in php_versions:
+        new_content = demo_content.copy()
+        apache_php_version = "apache2-php%s" % php_version
+        line4 = '    image: {repo_owner}/m2_{apache_php_version}:v{build_version}\n'.format(
+            repo_owner=REPO_OWNER,
+            apache_php_version=apache_php_version,
+            build_version=BUILD_VERSION
+        )
+        new_content[4 - 1] = line4
+
+        with open("all_docker_compose_file/m2_%s" % apache_php_version, "w") as f:
+            f.writelines(new_content)
+
+def generate_magento_docker_compose_fodlers():
+    local_con = Connection('localhost')
+    php_versions = get_php_versions()
+    for php_version in php_versions:
+        docker_compose_filename = "m2_apache2-php%s" % php_version
+        env_folder_name = 'Apache2-Mysql5.7-PHP%s' % php_version
+
+        dic_src = "docker_compose_folder/demo"
+        dic_dest = "docker_compose_folder/%s" % env_folder_name
+        dic_src_path = os.path.abspath(dic_src)
+        dic_dest_path = os.path.abspath(dic_dest)
+        local_con.local('rm -rf {0} && mkdir {0}'.format(dic_dest_path))
+        local_con.local('cp -r %s/* %s' % (dic_src_path, dic_dest_path))
+
+        file_src = "all_docker_compose_file/%s" % docker_compose_filename
+        file_dest = "docker_compose_folder/{0}/{1}".format(env_folder_name, 'docker-compose.yml')
+        file_src_path = os.path.abspath(file_src)
+        file_dest_path = os.path.abspath(file_dest)
+        local_con.local('cp -r %s %s' % (file_src_path, file_dest_path))
+
 if __name__ == '__main__':
     # run separate below functions
     # get_all_php_releases()
@@ -322,4 +359,7 @@ if __name__ == '__main__':
     # generate_magento_build_files()
     # generate_magento_build_folder()
     # build_magento_images()
-    push_magento_images_to_hub()
+    # push_magento_images_to_hub()
+    # generate_magento_docker_compose_files()
+    # generate_magento_docker_compose_fodlers()
+    
