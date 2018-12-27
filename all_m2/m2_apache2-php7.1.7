@@ -1,4 +1,4 @@
-FROM marstrueplus/apache2-php7.1.7
+FROM marstrueplus/apache2-php7.1.7:v1
 LABEL maintainer="mars@trueplus.vn"
 LABEL version="Magento >= 2.2.x"
 LABEL description="Apache 2 - PHP 7.1.7"
@@ -11,7 +11,7 @@ RUN curl -sS https://getcomposer.org/installer | php \
     && mv composer.phar /usr/local/bin/composer
 COPY ./auth.json $COMPOSER_HOME
 
-RUN requirements="libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype6 libjpeg-turbo8 libjpeg-turbo8-dev libpng12-dev libfreetype6-dev libicu-dev libxslt1-dev" \
+RUN requirements="libzip-dev libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype6 libjpeg-turbo8 libjpeg-turbo8-dev libpng12-dev libfreetype6-dev libicu-dev libxslt1-dev" \
     && apt-get update \
     && apt-get install -y $requirements \
     && rm -rf /var/lib/apt/lists/* \
@@ -24,12 +24,10 @@ RUN requirements="libpng12-dev libmcrypt-dev libmcrypt4 libcurl3-dev libfreetype
     && docker-php-ext-install xsl \
     && docker-php-ext-install soap \
     && docker-php-ext-install bcmath \
+    && docker-php-ext-install mcrypt \
     && docker-php-ext-install opcache \
     && requirementsToRemove="libpng12-dev libmcrypt-dev libcurl3-dev libpng12-dev libfreetype6-dev libjpeg-turbo8-dev" \
     && apt-get purge --auto-remove -y $requirementsToRemove
-
-# Install mcrypt
-RUN docker-php-ext-install mcrypt
 
 # Set UID 1000 to www-data user and GID to www-data group
 RUN usermod -u 1000 www-data \

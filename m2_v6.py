@@ -228,15 +228,16 @@ def generate_magento_build_files():
     for php_version in php_versions:
         new_content = demo_content.copy()
         apache_php_version = "apache2-php%s" % php_version
-        line1 = "FROM marstrueplus/%s:v%s\n" % (apache_php_version, BUILD_VERSION)
+        line1 = "FROM marstrueplus/%s:v%s\n" % (apache_php_version, REPO_OWNER)
         line4 = 'LABEL description="Apache 2 - PHP %s"\n' % php_version
         if compare_php_version('7.3.0', php_version, equal=False):
             if compare_php_version(php_version, '7.2.0', equal=True):
                 # install mcrypt using pecl and enable it
-                install_command = """    && pecl install mcrypt-1.0.1 \\\n    && docker-php-ext-enable mcrypt \\\n"""
+                install_command = 'pecl install mcrypt-1.0.1 && docker-php-ext-enable mcrypt'
             else:
-                install_command = '    && docker-php-ext-install mcrypt \\\n'
-            new_content.insert(26, install_command)
+                install_command = 'docker-php-ext-install mcrypt'
+            install_command = '\n# Install mcrypt\nRUN {command}\n'.format(command=install_command)
+            new_content.insert(29, install_command)
         new_content[1 - 1] = line1
         new_content[4 - 1] = line4
 
@@ -266,7 +267,9 @@ def generate_magento_build_folder():
 
 def build_magento_images():
     php_versions = get_php_versions()
-    for php_version in php_versions:
+    plen = len(php_versions)
+    for i in range(int((plen * 5) / 6), plen):
+        php_version = php_versions[i]
         docker_filename = "m2_apache2-php%s" % php_version
         dockerfile = "build_folder_m2/{0}/{0}".format(docker_filename)
         dockerfile_path = os.path.abspath(dockerfile)
@@ -291,26 +294,11 @@ def generate_magento_docker_compose_files():
     for php_version in php_versions:
         new_content = demo_content.copy()
         apache_php_version = "apache2-php%s" % php_version
-        line4 = '    image: {repo_owner}/m2_{apache_php_version}\n'.format(repo_owner=REPO_OWNER, apache_php_version=apache_php_version)
+        line4 = '    image: marstrueplus/m2_%s\n' % apache_php_version
         new_content[4 - 1] = line4
 
         with open("all_docker_compose_file/m2_%s" % apache_php_version, "w") as f:
             f.writelines(new_content)
-
-
-def push_magento_images_to_hub():
-    php_versions = get_php_versions()
-    for php_version in php_versions:
-        apache_php_version = "apache2-php%s" % php_version
-        magento_image_name = '{repo_owner}/m2_{apache_php_version}:v{build_version}'.format(
-            repo_owner=REPO_OWNER,
-            apache_php_version=apache_php_version,
-            build_version=BUILD_VERSION
-        )
-        push_command = "docker push %s" % magento_image_name
-        start_str = "*" * 50 + "\n" + "*" * 50 + "\nStart pushing %s image \n" % magento_image_name + "*" * 50 + "\n" + "*" * 50 + "\n"
-        subprocess.run(["echo", start_str])
-        subprocess.run(push_command, shell=True)
 
 
 if __name__ == '__main__':
@@ -321,5 +309,4 @@ if __name__ == '__main__':
     # build_apache_php_images()
     # generate_magento_build_files()
     # generate_magento_build_folder()
-    # build_magento_images()
-    push_magento_images_to_hub()
+    build_magento_images()
